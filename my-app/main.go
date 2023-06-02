@@ -47,7 +47,7 @@ func main() {
 
 	mainServer := &http.Server{
 		Addr:         ":8080",
-		Handler:      mainRouter(),
+		Handler:      mainRouter(db),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -81,10 +81,10 @@ func main() {
 }
 
 // Modify the database connection details according to your Amazon RDS configuration
-func mainRouter() http.Handler {
+func mainRouter(db *sql.DB) http.Handler {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
-	engine.GET("/hostname", getHostname)
+	engine.GET("/hostname", getHostname(db))
 	engine.GET("/ping", ping)
 	return engine
 }
@@ -101,20 +101,22 @@ type Item struct {
 	Name string `json:"name"`
 }
 
-func getHostname(c *gin.Context) {
-	// Get the hostname
-	name, err := os.Hostname()
-	if err != nil {
-		panic(err)
-	}
+func getHostname(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the hostname
+		name, err := os.Hostname()
+		if err != nil {
+			panic(err)
+		}
 
-	// Insert the hostname into the database
-	_, err = db.Exec("INSERT INTO items (name) VALUES (?)", name)
-	if err != nil {
-		panic(err)
-	}
+		// Insert the hostname into the database
+		_, err = db.Exec("INSERT INTO items (name) VALUES (?)", name)
+		if err != nil {
+			panic(err)
+		}
 
-	c.IndentedJSON(http.StatusOK, gin.H{"hostname": name})
+		c.IndentedJSON(http.StatusOK, gin.H{"hostname": name})
+	}
 }
 
 func getHealthStatus(c *gin.Context) {
