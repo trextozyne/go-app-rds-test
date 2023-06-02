@@ -19,6 +19,10 @@ var (
 
 var RDSEndpoint string
 
+type App struct {
+	DB *sql.DB
+}
+
 func main() {
 	// Retrieve the RDS_ENDPOINT environment variable
 	rdsEndpoint := RDSEndpoint
@@ -45,9 +49,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	app := &App{
+		DB: db,
+	}
+
 	mainServer := &http.Server{
 		Addr:         ":8080",
-		Handler:      mainRouter(db),
+		Handler:      mainRouter(app),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -81,10 +89,10 @@ func main() {
 }
 
 // Modify the database connection details according to your Amazon RDS configuration
-func mainRouter(db *sql.DB) http.Handler {
+func mainRouter(app *App) http.Handler {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
-	engine.GET("/hostname", getHostname(db))
+	engine.GET("/hostname", app.getHostname)
 	engine.GET("/ping", ping)
 	return engine
 }
@@ -101,22 +109,20 @@ type Item struct {
 	Name string `json:"name"`
 }
 
-func getHostname(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Get the hostname
-		name, err := os.Hostname()
-		if err != nil {
-			panic(err)
-		}
-
-		// Insert the hostname into the database
-		_, err = db.Exec("INSERT INTO items (name) VALUES (?)", name)
-		if err != nil {
-			panic(err)
-		}
-
-		c.IndentedJSON(http.StatusOK, gin.H{"hostname": name})
+func (app *App) getHostname(c *gin.Context) {
+	// Get the hostname
+	name, err := os.Hostname()
+	if err != nil {
+		panic(err)
 	}
+
+	// Insert the hostname into the database
+	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
+	if err != nil {
+		panic(err)
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"hostname": name})
 }
 
 func getHealthStatus(c *gin.Context) {
