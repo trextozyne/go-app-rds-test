@@ -19,6 +19,10 @@ var (
 	DatabaseName string // Replace with your actual database name
 )
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 type App struct {
 	DB *sql.DB
 }
@@ -26,11 +30,13 @@ type App struct {
 func main() {
 	// Retrieve the RDS_ENDPOINT environment variable
 	rdsEndpoint := os.Getenv("RDS_ENDPOINT")
+	RDSEndpoint = rdsEndpoint
+
+	DatabaseName := os.Getenv("DATABASE_NAME")
+
 	if rdsEndpoint == "" {
 		log.Fatal("RDS_ENDPOINT environment variable is not set")
 	}
-	RDSEndpoint = rdsEndpoint
-
 	// Construct the database connection string
 	dbURL := fmt.Sprintf("tosyne:Salvat1on@tcp(%s)/%s", RDSEndpoint, DatabaseName)
 
@@ -42,10 +48,7 @@ func main() {
 	defer db.Close()
 
 	// Create the 'items' table in the database
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS items (
-		id INT AUTO_INCREMENT PRIMARY KEY,
-		name VARCHAR(255) NOT NULL
-	)`)
+	err = createItemsTable(db)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,60 +57,33 @@ func main() {
 		DB: db,
 	}
 
-	mainServer := &http.Server{
+	router := gin.Default()
+	router.GET("/hostname", app.getHostname)
+	router.GET("/ping", ping)
+	router.GET("/health", getHealthStatus)
+
+	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      mainRouter(app),
+		Handler:      router,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
-	healthServer := &http.Server{
-		Addr:         ":8081",
-		Handler:      healthRouter(),
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-	}
-
-	g.Go(func() error {
-		err := mainServer.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			return err
-		}
-		return nil
-	})
-
-	g.Go(func() error {
-		err := healthServer.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			return err
-		}
-		return nil
-	})
-
-	if err := g.Wait(); err != nil {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }
 
-// Modify the database connection details according to your Amazon RDS configuration
-func mainRouter(app *App) http.Handler {
-	engine := gin.New()
-	engine.Use(gin.Recovery())
-	engine.GET("/hostname", app.getHostname)
-	engine.GET("/ping", ping)
-	return engine
-}
-
-func healthRouter() http.Handler {
-	engine := gin.New()
-	engine.Use(gin.Recovery())
-	engine.GET("/health", getHealthStatus)
-	return engine
-}
-
-type Item struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+func createItemsTable(db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS items (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		name VARCHAR(255) NOT NULL
+	)`)
+	if err != nil {
+		return err
+	}
+	log.Println("Table 'items' created successfully")
+	return nil
 }
 
 func (app *App) getHostname(c *gin.Context) {
@@ -115,7 +91,7 @@ func (app *App) getHostname(c *gin.Context) {
 	name, err := os.Hostname()
 	if err != nil {
 		log.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
 		return
 	}
 
@@ -123,11 +99,11 @@ func (app *App) getHostname(c *gin.Context) {
 	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
 	if err != nil {
 		log.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, gin.H{"hostname": name})
+	c.JSON(http.StatusOK, gin.H{"hostname": name})
 }
 
 func getHealthStatus(c *gin.Context) {
