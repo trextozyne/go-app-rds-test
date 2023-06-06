@@ -32,7 +32,7 @@ func main() {
 	rdsEndpoint := os.Getenv("RDS_ENDPOINT")
 	RDSEndpoint = rdsEndpoint
 
-	DatabaseName := os.Getenv("DATABASE_NAME")
+	DatabaseName = os.Getenv("DATABASE_NAME")
 
 	if rdsEndpoint == "" {
 		log.Fatal("RDS_ENDPOINT environment variable is not set")
