@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	g errgroup.Group
+	g            errgroup.Group
+	RDSEndpoint  string
+	DatabaseName string // Replace with your actual database name
 )
-
-var RDSEndpoint string
 
 type App struct {
 	DB *sql.DB
@@ -25,13 +25,14 @@ type App struct {
 
 func main() {
 	// Retrieve the RDS_ENDPOINT environment variable
-	rdsEndpoint := RDSEndpoint
+	rdsEndpoint := os.Getenv("RDS_ENDPOINT")
 	if rdsEndpoint == "" {
 		log.Fatal("RDS_ENDPOINT environment variable is not set")
 	}
+	RDSEndpoint = rdsEndpoint
 
 	// Construct the database connection string
-	dbURL := fmt.Sprintf("tosyne:Salvat1on@tcp(%s:port)/database", rdsEndpoint)
+	dbURL := fmt.Sprintf("tosyne:Salvat1on@tcp(%s)/%s", RDSEndpoint, DatabaseName)
 
 	// Open a connection to the database
 	db, err := sql.Open("mysql", dbURL)
@@ -70,17 +71,17 @@ func main() {
 	g.Go(func() error {
 		err := mainServer.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			return err
 		}
-		return err
+		return nil
 	})
 
 	g.Go(func() error {
 		err := healthServer.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			return err
 		}
-		return err
+		return nil
 	})
 
 	if err := g.Wait(); err != nil {
@@ -113,13 +114,17 @@ func (app *App) getHostname(c *gin.Context) {
 	// Get the hostname
 	name, err := os.Hostname()
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
 	}
 
 	// Insert the hostname into the database
 	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{"hostname": name})
