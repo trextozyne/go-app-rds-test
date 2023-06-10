@@ -30,7 +30,7 @@ type App struct {
 }
 
 func main() {
-	// Get the absolute path to the .env file.
+	// Get the absolute path to the .env file..
 	envPath := filepath.Join(os.Getenv("HOME"), ".env")
 
 	// Load the environment variables from the .env file.
