@@ -78,7 +78,6 @@ func main() {
 	router := gin.Default()
 	router.GET("/hostname", app.getHostname)
 	router.GET("/ping", ping)
-	router.GET("/health", getHealthStatus)
 
 	server := &http.Server{
 		Addr:         ":8080",
@@ -87,13 +86,16 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
+	healthRouter := gin.Default()
+	healthRouter.GET("/health", getHealthStatus)
+
 	healthServer := &http.Server{
 		Addr:         ":8081",
-		Handler:      router,
+		Handler:      healthRouter,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-
+	
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
