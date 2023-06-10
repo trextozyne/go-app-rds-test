@@ -17,8 +17,10 @@ import (
 
 var (
 	g            errgroup.Group
+	Username  string
+	Password string 
 	RDSEndpoint  string
-	DatabaseName string // Replace with your actual database name
+	DatabaseName string 
 )
 
 type ErrorResponse struct {
@@ -41,8 +43,9 @@ func main() {
 	}
 
 	// Retrieve the RDS_ENDPOINT environment variable
+	Username := os.Getenv("Username")
+	Password = os.Getenv("Password")
 	RDSEndpoint := os.Getenv("RDSEndpoint")
-
 	DatabaseName = os.Getenv("DatabaseName")
 
 	if RDSEndpoint == "" {
@@ -53,7 +56,7 @@ func main() {
 		log.Fatal("DatabaseName environment variable is not set")
 	}
 	// Construct the database connection string
-	dbURL := fmt.Sprintf("tosyne:Salvat1on@tcp(%s)/%s", RDSEndpoint, DatabaseName)
+	dbURL := fmt.Sprintf("%s:%s@tcp(%s)/%s", Username, Password, RDSEndpoint, DatabaseName)
 
 	// Open a connection to the database
 	db, err := sql.Open("mysql", dbURL)
