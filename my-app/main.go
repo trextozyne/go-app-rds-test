@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/sync/errgroup"
 )
@@ -28,14 +30,27 @@ type App struct {
 }
 
 func main() {
+	// Get the absolute path to the .env file.
+	envPath := filepath.Join(os.Getenv("HOME"), ".env")
+
+	// Load the environment variables from the .env file.
+	err := godotenv.Load(envPath)
+	if err != nil {
+		fmt.Println(envPath)
+		log.Fatalf("Error loading environment variables file")
+	}
+
 	// Retrieve the RDS_ENDPOINT environment variable
-	rdsEndpoint := os.Getenv("RDS_ENDPOINT")
-	RDSEndpoint = rdsEndpoint
+	RDSEndpoint := os.Getenv("RDSEndpoint")
 
-	DatabaseName = os.Getenv("DATABASE_NAME")
+	DatabaseName = os.Getenv("DatabaseName")
 
-	if rdsEndpoint == "" {
+	if RDSEndpoint == "" {
 		log.Fatal("RDS_ENDPOINT environment variable is not set")
+	}
+
+	if DatabaseName == "" {
+		log.Fatal("DatabaseName environment variable is not set")
 	}
 	// Construct the database connection string
 	dbURL := fmt.Sprintf("tosyne:Salvat1on@tcp(%s)/%s", RDSEndpoint, DatabaseName)
