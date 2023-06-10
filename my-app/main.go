@@ -84,7 +84,18 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
+	healthServer := &http.Server{
+		Addr:         ":8081",
+		Handler:      router,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+
+	if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }
