@@ -75,23 +75,36 @@ func main() {
 		DB: db,
 	}
 
-	router := gin.Default()
-	router.GET("/hostname", app.getHostname)
-	router.GET("/ping", ping)
+// 	router := gin.Default()
+// 	router.GET("/hostname", app.getHostname)
+// 	router.GET("/ping", ping)
+	func mainRouter() http.Handler {
+	    engine := gin.New()
+	    engine.Use(gin.Recovery())
+	    engine.GET("/hostname", app.getHostname)
+	    engine.GET("/ping", ping)
+	    return engine
+	}
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      router,
+		Handler:      mainRouter(),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
-	healthRouter := gin.Default()
-	healthRouter.GET("/health", getHealthStatus)
+// 	healthRouter := gin.Default()
+// 	healthRouter.GET("/health", getHealthStatus)
+	func healthRouter() http.Handler {
+	    engine := gin.New()
+	    engine.Use(gin.Recovery())
+	    engine.GET("/health", getHealthStatus)
+	    return engine
+	}
 
 	healthServer := &http.Server{
 		Addr:         ":8081",
-		Handler:      healthRouter,
+		Handler:      healthRouter(),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
