@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -43,14 +42,14 @@ func main() {
 		log.Fatalf("Error loading environment variables file")
 	}
 
-	// Retrieve the environment variables.
-	Username = os.Getenv("Username")
+	// Retrieve the RDS_ENDPOINT environment variable.
+	Username := os.Getenv("Username")
 	Password = os.Getenv("Password")
-	RDSEndpoint = os.Getenv("RDSEndpoint")
+	RDSEndpoint := os.Getenv("RDSEndpoint")
 	DatabaseName = os.Getenv("DatabaseName")
 
 	if RDSEndpoint == "" {
-		log.Fatal("RDSEndpoint environment variable is not set")
+		log.Fatal("RDS_ENDPOINT environment variable is not set")
 	}
 
 	if DatabaseName == "" {
@@ -79,11 +78,13 @@ func main() {
 
 	router := gin.Default()
 
-	// Define the HTML template for the web page.
-	router.SetHTMLTemplate(template.Must(template.ParseFiles("index.html")))
+	// Route for the HTML interface.
+	router.LoadHTMLFiles("index.html")
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", nil)
+	})
 
-	// Define the route handlers.
-	router.GET("/", index)
+	// API routes.
 	router.GET("/hostname", app.getHostname)
 	router.GET("/ping", ping)
 
@@ -94,7 +95,31 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	healthRouter := gin.Default()
+	healthRouter.GET("/health", getHealthStatus)
+
+	healthServer := &http.Server{
+		Addr:         ":8081",
+		Handler:      healthRouter,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	g.Go(func() error {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return err
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return err
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -111,12 +136,8 @@ func createItemsTable(db *sql.DB) error {
 	return nil
 }
 
-func index(c *gin.Context) {
-	c.HTML(http.StatusOK, "index.html", nil)
-}
-
 func (app *App) getHostname(c *gin.Context) {
-	// Get the hostname.
+	// Get the hostname
 	name, err := os.Hostname()
 	if err != nil {
 		log.Println(err)
@@ -124,7 +145,7 @@ func (app *App) getHostname(c *gin.Context) {
 		return
 	}
 
-	// Insert the hostname into the database.
+	// Insert the hostname into the database
 	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
 	if err != nil {
 		log.Println(err)
@@ -133,6 +154,10 @@ func (app *App) getHostname(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"hostname": name})
+}
+
+func getHealthStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "ready"})
 }
 
 func ping(c *gin.Context) {
