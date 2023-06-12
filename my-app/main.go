@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 	"path/filepath"
-// 	"html/template"
+	"html/template"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -88,7 +88,8 @@ func main() {
 	router := gin.Default()
 
 	// Define the HTML template for the web page.
-	// router.SetHTMLTemplate(template.Must(template.ParseFiles("index.html")))
+	filePrefix, _ := filepath.Abs("./my-app/")       // path from the working directory
+	router.SetHTMLTemplate(template.Must(template.ParseFiles(filePrefix + "index.html")))
 	router.LoadHTMLFiles("index.html")
 
 	// Define the route handlers.
