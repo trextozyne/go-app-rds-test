@@ -36,7 +36,7 @@ type ErrorResponse struct {
 
 func init() {
 	var err error
-	indexTemplate, err = template.New("index").Parse(indexTemplateHTML)
+	indexTemplate, err = template.New("/index").Parse(indexTemplateHTML)
 	if err != nil {
 		log.Fatalf("Error parsing index template: %s", err.Error())
 	}
