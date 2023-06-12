@@ -22,6 +22,8 @@ var (
 	Password string 
 	RDSEndpoint  string
 	DatabaseName string 
+
+	indexTemplate *template.Template
 )
 
 type ErrorResponse struct {
@@ -31,6 +33,58 @@ type ErrorResponse struct {
 // type App struct {
 // 	DB *sql.DB
 // }
+
+func init() {
+	var err error
+	indexTemplate, err = template.New("index").Parse(indexTemplateHTML)
+	if err != nil {
+		log.Fatalf("Error parsing index template: %s", err.Error())
+	}
+}
+
+const indexTemplateHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Interface</title>
+</head>
+<body>
+    <h1>Web Interface</h1>
+    <button onclick="getHostname()">Get Hostname</button>
+    <button onclick="ping()">Ping</button>
+    <script>
+        function getHostname() {
+            fetch('/hostname')
+                .then(response => response.json())
+                .then(data => {
+                    alert('Hostname: ' + data.hostname);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function ping() {
+            fetch('/ping')
+                .then(response => response.json())
+                .then(data => {
+                    alert('Message: ' + data.message);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+</html>
+
+`
+func index(c *gin.Context) {
+	w := c.Writer
+	if err := indexTemplate.Execute(w, nil); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+	}
+}
 
 func main() {
 	// Get the absolute path to the .env file..
@@ -88,9 +142,9 @@ func main() {
 	router := gin.Default()
 
 	// Define the HTML template for the web page.
-	filePrefix, _ := filepath.Abs("./my-app/")       // path from the working directory
-	router.SetHTMLTemplate(template.Must(template.ParseFiles(filePrefix + "index.html")))
-	router.LoadHTMLFiles("index.html")
+	// filePrefix, _ := filepath.Abs("./my-app/")       // path from the working directory
+	// router.SetHTMLTemplate(template.Must(template.ParseFiles(filePrefix + "index.html")))
+	
 
 	// Define the route handlers.
 	router.GET("/", index)
@@ -122,12 +176,6 @@ func main() {
 	if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
-}
-
-func index(c *gin.Context) {
-	c.HTML(http.StatusOK, "index.html", gin.H{
-	  "message": "Hello, World!",
-	})
 }
 
 // func createItemsTable(db *sql.DB) error {
