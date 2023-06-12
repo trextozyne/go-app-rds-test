@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	// "database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,9 +28,9 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-type App struct {
-	DB *sql.DB
-}
+// type App struct {
+// 	DB *sql.DB
+// }
 
 func main() {
 	// Get the absolute path to the .env file..
@@ -129,37 +129,37 @@ func index(c *gin.Context) {
 	})
 }
 
-func createItemsTable(db *sql.DB) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS items (
-		id INT AUTO_INCREMENT PRIMARY KEY,
-		name VARCHAR(255) NOT NULL
-	)`)
-	if err != nil {
-		return err
-	}
-	log.Println("Table 'items' created successfully")
-	return nil
-}
+// func createItemsTable(db *sql.DB) error {
+// 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS items (
+// 		id INT AUTO_INCREMENT PRIMARY KEY,
+// 		name VARCHAR(255) NOT NULL
+// 	)`)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	log.Println("Table 'items' created successfully")
+// 	return nil
+// }
 
-func (app *App) getHostname(c *gin.Context) {
-	// Get the hostname
-	name, err := os.Hostname()
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
-		return
-	}
+// func (app *App) getHostname(c *gin.Context) {
+// 	// Get the hostname
+// 	name, err := os.Hostname()
+// 	if err != nil {
+// 		log.Println(err)
+// 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
+// 		return
+// 	}
 
-	// Insert the hostname into the database
-	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
-		return
-	}
+// 	// Insert the hostname into the database
+// 	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
+// 	if err != nil {
+// 		log.Println(err)
+// 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{"hostname": name})
-}
+// 	c.JSON(http.StatusOK, gin.H{"hostname": name})
+// }
 
 func getHealthStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ready"})
