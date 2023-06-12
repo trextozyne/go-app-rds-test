@@ -89,7 +89,7 @@ func main() {
 
 	// Define the HTML template for the web page.
 	// router.SetHTMLTemplate(template.Must(template.ParseFiles("index.html")))
-	router.SetHTMLTemplate(template.Must(template.ParseFiles("index.html")))
+	router.LoadHTMLFiles("index.html")
 
 	// Define the route handlers.
 	router.GET("/", index)
