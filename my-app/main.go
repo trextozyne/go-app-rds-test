@@ -6,8 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
+	"path/filepath"
+	"html/template"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -17,10 +18,10 @@ import (
 
 var (
 	g            errgroup.Group
-	Username     string
-	Password     string
+	Username  string
+	Password string 
 	RDSEndpoint  string
-	DatabaseName string
+	DatabaseName string 
 )
 
 type ErrorResponse struct {
@@ -32,60 +33,68 @@ type App struct {
 }
 
 func main() {
-	// Get the absolute path to the .env file.
+	// Get the absolute path to the .env file..
 	envPath := filepath.Join(os.Getenv("HOME"), ".env")
 
 	// Load the environment variables from the .env file.
 	err := godotenv.Load(envPath)
 	if err != nil {
 		fmt.Println(envPath)
-		log.Fatalf("Error loading environment variables file")
+		log.Fatalf("Error loading environment variables file: %s", err.Error())
 	}
 
-	// Retrieve the RDS_ENDPOINT environment variable.
-	Username := os.Getenv("Username")
+	// Retrieve the RDS_ENDPOINT environment variable
+	Username = os.Getenv("Username")
 	Password = os.Getenv("Password")
-	RDSEndpoint := os.Getenv("RDSEndpoint")
+	RDSEndpoint = os.Getenv("RDSEndpoint")
 	DatabaseName = os.Getenv("DatabaseName")
 
+	if Username == "" {
+		log.Fatal("Username environment variable is not set")
+	}
+
+	if Password == "" {
+		log.Fatal("Password environment variable is not set")
+	}
+
 	if RDSEndpoint == "" {
-		log.Fatal("RDS_ENDPOINT environment variable is not set")
+		log.Fatal("RDSENDPOINT environment variable is not set")
 	}
 
 	if DatabaseName == "" {
 		log.Fatal("DatabaseName environment variable is not set")
 	}
 
-	// Construct the database connection string.
-	dbURL := fmt.Sprintf("%s:%s@tcp(%s)/%s", Username, Password, RDSEndpoint, DatabaseName)
+	// Construct the database connection string
+	// dbURL := fmt.Sprintf("%s:%s@tcp(%s)/%s", Username, Password, RDSEndpoint, DatabaseName)
 
-	// Open a connection to the database.
-	db, err := sql.Open("mysql", dbURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+	// Open a connection to the database
+	// db, err := sql.Open("mysql", dbURL)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer db.Close()
 
-	// Create the 'items' table in the database.
-	err = createItemsTable(db)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Create the 'items' table in the database
+	// err = createItemsTable(db)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	app := &App{
-		DB: db,
-	}
+	// app := &App{
+	// 	DB: db,
+	// }
 
 	router := gin.Default()
 
-	// Route for the HTML interface.
-	router.LoadHTMLFiles("index.html")
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
-	})
+	// Define the HTML template for the web page.
+	// router.SetHTMLTemplate(template.Must(template.ParseFiles("index.html")))
+	router.SetHTMLTemplate(template.Must(template.ParseFiles("index.html")))
 
-	// API routes.
-	router.GET("/hostname", app.getHostname)
+	// Define the route handlers.
+	router.GET("/", index)
+
+	// router.GET("/hostname", app.getHostname)
 	router.GET("/ping", ping)
 
 	server := &http.Server{
@@ -104,24 +113,20 @@ func main() {
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-
-	g.Go(func() error {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			return err
-		}
-		return nil
-	})
-
-	g.Go(func() error {
-		if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			return err
-		}
-		return nil
-	})
-
-	if err := g.Wait(); err != nil {
+	
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+
+	if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+}
+
+func index(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.html", gin.H{
+	  "message": "Hello, World!",
+	})
 }
 
 func createItemsTable(db *sql.DB) error {
