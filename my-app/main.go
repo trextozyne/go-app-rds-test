@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "database/sql"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -30,9 +30,9 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// type App struct {
-// 	DB *sql.DB
-// }
+type App struct {
+	DB *sql.DB
+}
 
 func init() {
 	var err error
@@ -120,36 +120,31 @@ func main() {
 	}
 
 	// Construct the database connection string
-	// dbURL := fmt.Sprintf("%s:%s@tcp(%s)/%s", Username, Password, RDSEndpoint, DatabaseName)
+	dbURL := fmt.Sprintf("%s:%s@tcp(%s)/%s", Username, Password, RDSEndpoint, DatabaseName)
 
 	// Open a connection to the database
-	// db, err := sql.Open("mysql", dbURL)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer db.Close()
+	db, err := sql.Open("mysql", dbURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 
 	// Create the 'items' table in the database
-	// err = createItemsTable(db)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	err = createItemsTable(db)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// app := &App{
-	// 	DB: db,
-	// }
+	app := &App{
+		DB: db,
+	}
 
 	router := gin.Default()
-
-	// Define the HTML template for the web page.
-	// filePrefix, _ := filepath.Abs("./my-app/")       // path from the working directory
-	// router.SetHTMLTemplate(template.Must(template.ParseFiles(filePrefix + "index.html")))
-	
 
 	// Define the route handlers.
 	router.GET("/", index)
 
-	// router.GET("/hostname", app.getHostname)
+	router.GET("/hostname", app.getHostname)
 	router.GET("/ping", ping)
 
 	server := &http.Server{
@@ -178,37 +173,37 @@ func main() {
 	}
 }
 
-// func createItemsTable(db *sql.DB) error {
-// 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS items (
-// 		id INT AUTO_INCREMENT PRIMARY KEY,
-// 		name VARCHAR(255) NOT NULL
-// 	)`)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	log.Println("Table 'items' created successfully")
-// 	return nil
-// }
+func createItemsTable(db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS items (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		name VARCHAR(255) NOT NULL
+	)`)
+	if err != nil {
+		return err
+	}
+	log.Println("Table 'items' created successfully")
+	return nil
+}
 
-// func (app *App) getHostname(c *gin.Context) {
-// 	// Get the hostname
-// 	name, err := os.Hostname()
-// 	if err != nil {
-// 		log.Println(err)
-// 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
-// 		return
-// 	}
+func (app *App) getHostname(c *gin.Context) {
+	// Get the hostname
+	name, err := os.Hostname()
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
+		return
+	}
 
-// 	// Insert the hostname into the database
-// 	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
-// 	if err != nil {
-// 		log.Println(err)
-// 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
-// 		return
-// 	}
+	// Insert the hostname into the database
+	_, err = app.DB.Exec("INSERT INTO items (name) VALUES (?)", name)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Internal Server Error"})
+		return
+	}
 
-// 	c.JSON(http.StatusOK, gin.H{"hostname": name})
-// }
+	c.JSON(http.StatusOK, gin.H{"hostname": name})
+}
 
 func getHealthStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ready"})
